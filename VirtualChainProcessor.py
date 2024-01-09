@@ -64,22 +64,38 @@ class VirtualChainProcessor(object):
         rejected_blocks.extend(parent_chain_response.get('removedChainBlockHashes', []))
 
         with session_maker() as s:
-            # set is_accepted to False, when blocks were removed from virtual parent chain
+            # When blocks were removed from virtual parent chain...
             if rejected_blocks:
+                # set Transaction.is_accepted to False
                 count = s.query(Transaction).filter(Transaction.accepting_block_hash.in_(rejected_blocks)) \
                     .update({'is_accepted': False, 'accepting_block_hash': None})
                 _logger.debug(f'Set is_accepted=False for {count} TXs')
                 s.commit()
 
+                # Set Block.is_chain_block to False
+                count = s.query(Block).filter(Block.hash.in_(rejected_blocks)) \
+                    .update({'is_chain_block': False})
+                _logger.debug(f'Set is_chain_block=False for {count} Blocks')
+                s.commit()
+
+
             count_tx = 0
 
             # set is_accepted to True and add accepting_block_hash
+            accepting_blocks = []
             for accepting_block_hash, accepted_tx_ids in accepted_ids:
+                accepting_blocks.append(accepting_block_hash)
                 s.query(Transaction).filter(Transaction.transaction_id.in_(accepted_tx_ids)) \
                     .update({'is_accepted': True, 'accepting_block_hash': accepting_block_hash})
                 count_tx += len(accepted_tx_ids)
 
             _logger.debug(f'Set is_accepted=True for {count_tx} transactions.')
+            s.commit()
+
+            # Set Block.is_chain_block to True for removed chain blocks
+            count = s.query(Block).filter(Block.hash.in_(accepting_blocks)) \
+                .update({'is_chain_block': True})
+            _logger.debug(f'Set is_chain_block=True for {count} Blocks')
             s.commit()
 
         # Mark last known/processed as start point for the next query

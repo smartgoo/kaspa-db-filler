@@ -26,6 +26,6 @@ class Block(Base):
     version = Column(Integer)
 
 
-Index("block_chainblock", Block.is_chain_block)
-Index("idx_blue_score", Block.blue_score)
-Index("idx_daa_score", Block.daa_score)
+Index("blocks_idx_chainblock", Block.is_chain_block)
+# Index("idx_blue_score", Block.blue_score)
+# Index("idx_daa_score", Block.daa_score)

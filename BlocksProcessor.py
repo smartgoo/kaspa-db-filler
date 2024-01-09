@@ -13,9 +13,9 @@ from utils.Event import Event
 
 _logger = logging.getLogger(__name__)
 
-CLUSTER_SIZE_INITIAL = 180 * 20
-CLUSTER_SIZE_SYNCED = 5
-CLUSTER_WAIT_SECONDS = 4
+CLUSTER_SIZE_INITIAL = 60 * 30      # 30 mins of blocks at 1 BPS
+CLUSTER_SIZE_SYNCED = 10            # 10 block batch size
+CLUSTER_WAIT_SECONDS = 5            # Wait 5 seconds between polls
 
 
 class BlocksProcessor(object):

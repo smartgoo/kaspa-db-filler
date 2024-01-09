@@ -5,9 +5,10 @@ name = "pypi"
 
 [packages]
 sqlalchemy = "*"
-psycopg2 = "*"
+psycopg2-binary = "*"
 grpcio = "*"
 grpcio-tools = "*"
+pydantic_settings = { version = "*", extras = ["dotenv"] }
 
 [dev-packages]
 

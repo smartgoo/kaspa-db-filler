@@ -5,14 +5,16 @@ import threading
 import time
 
 from BlocksProcessor import BlocksProcessor
-from TxAddrMappingUpdater import TxAddrMappingUpdater
+# from TxAddrMappingUpdater import TxAddrMappingUpdater
 from VirtualChainProcessor import VirtualChainProcessor
+
+from conf import conf
 from dbsession import create_all
 from helper import KeyValueStore
 from kaspad.KaspadMultiClient import KaspadMultiClient
 
 logging.basicConfig(format="%(asctime)s::%(levelname)s::%(name)s::%(message)s",
-                    level=logging.DEBUG if os.getenv("DEBUG", False) else logging.INFO,
+                    level=logging.DEBUG if conf.DEBUG else logging.INFO,
                     handlers=[
                         logging.StreamHandler()
                     ]
@@ -26,14 +28,16 @@ _logger = logging.getLogger(__name__)
 
 # create tables in database
 _logger.info('Creating DBs if not exist.')
-create_all(drop=False)
+create_all(drop=True)
 
 kaspad_hosts = []
 
 for i in range(100):
     try:
-        kaspad_hosts.append(os.environ[f"KASPAD_HOST_{i + 1}"].strip())
-    except KeyError:
+        host = getattr(conf, f"KASPAD_HOST_{i + 1}")
+        print(host)
+        kaspad_hosts.append(host.strip())
+    except AttributeError:
         break
 
 if not kaspad_hosts:
@@ -91,29 +95,30 @@ async def main():
 
 
 if __name__ == '__main__':
-    tx_addr_mapping_updater = TxAddrMappingUpdater()
+    # tx_addr_mapping_updater = TxAddrMappingUpdater()
 
 
     # custom exception hook for thread
-    def custom_hook(args):
-        global tx_addr_mapping_updater
-        # report the failure
-        _logger.error(f'Thread failed: {args.exc_value}')
-        thread = args[3]
+    # def custom_hook(args):
+    #     global tx_addr_mapping_updater
+    #     # report the failure
+    #     _logger.error(f'Thread failed: {args.exc_value}')
+    #     thread = args[3]
 
-        # check if TxAddrMappingUpdater
-        if thread.name == 'TxAddrMappingUpdater':
-            p = threading.Thread(target=tx_addr_mapping_updater.loop, daemon=True, name="TxAddrMappingUpdater")
-            p.start()
-            raise Exception("TxAddrMappingUpdater thread crashed.")
+    #     # check if TxAddrMappingUpdater
+    #     if thread.name == 'TxAddrMappingUpdater':
+    #         p = threading.Thread(target=tx_addr_mapping_updater.loop, daemon=True, name="TxAddrMappingUpdater")
+    #         p.start()
+    #         raise Exception("TxAddrMappingUpdater thread crashed.")
 
 
-    # set the exception hook
-    threading.excepthook = custom_hook
+    # # set the exception hook
+    # threading.excepthook = custom_hook
 
-    # run TxAddrMappingUpdater
-    # will be rerun
-    _logger.info('Starting updater thread now.')
-    threading.Thread(target=tx_addr_mapping_updater.loop, daemon=True, name="TxAddrMappingUpdater").start()
-    _logger.info('Starting main thread now.')
+    # # run TxAddrMappingUpdater
+    # # will be rerun
+    # _logger.info('Starting updater thread now.')
+    # threading.Thread(target=tx_addr_mapping_updater.loop, daemon=True, name="TxAddrMappingUpdater").start()
+    # _logger.info('Starting main thread now.')
+
     asyncio.run(main())

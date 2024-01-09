@@ -6,8 +6,7 @@ from dbsession import Base
 class Transaction(Base):
     __tablename__ = 'transactions'
     subnetwork_id = Column(String)  # "0000000000000000000000000000000000000000",
-    transaction_id = Column(String,
-                            primary_key=True)  # "bedea078f74f241e7d755a98c9e39fda1dc56491dc7718485a8f221f73f03061",
+    transaction_id = Column(String, primary_key=True)  # "bedea078f74f241e7d755a98c9e39fda1dc56491dc7718485a8f221f73f03061",
     hash = Column(String)  # "a5f99f4dc55693124e7c6b75dc3e56b60db381a74716046dbdcae9210ce1052f",
     mass = Column(String)  # "2036",
     block_hash = Column(ARRAY(String))  # "1b41af8cfe1851243bedf596b7299c039b86b2fef8eb4204b04f954da5d2ab0f",
@@ -16,9 +15,9 @@ class Transaction(Base):
     accepting_block_hash = Column(String, nullable=True)
 
 
-Index("block_time_idx", Transaction.block_time)
-Index("idx_accepting_block", Transaction.accepting_block_hash)
-Index("idx_block_hash", Transaction.block_hash)
+Index("txs_idx_block_time", Transaction.block_time)
+Index("txs_idx_accepting_block", Transaction.accepting_block_hash)
+Index("txs_idx_block_hash", Transaction.block_hash)
 
 
 class TransactionOutput(Base):
@@ -33,9 +32,9 @@ class TransactionOutput(Base):
     accepting_block_hash = Column(String)
 
 
-Index("idx_txouts", TransactionOutput.transaction_id)
-Index("idx_txouts_addr", TransactionOutput.script_public_key_address)
-Index("tx_id_and_index", TransactionOutput.transaction_id, TransactionOutput.index)
+Index("outputs_idx_creating_tx_id", TransactionOutput.transaction_id)
+# Index("idx_txouts_addr", TransactionOutput.script_public_key_address)
+# Index("tx_id_and_index", TransactionOutput.transaction_id, TransactionOutput.index)
 
 
 class TransactionInput(Base):
@@ -51,5 +50,5 @@ class TransactionInput(Base):
     sig_op_count = Column(Integer)
 
 
-Index("idx_txin_prev", TransactionInput.previous_outpoint_hash)
-Index("idx_txin", TransactionInput.transaction_id)
+Index("inputs_idx_creating_tx_id", TransactionInput.previous_outpoint_hash)
+Index("inputs_idx_spending_tx_id", TransactionInput.transaction_id)

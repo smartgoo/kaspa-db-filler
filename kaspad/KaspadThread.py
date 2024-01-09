@@ -7,7 +7,7 @@ from google.protobuf import json_format
 from grpc._channel import _MultiThreadedRendezvous
 
 from . import messages_pb2_grpc
-from .messages_pb2 import KaspadMessage
+from .messages_pb2 import KaspadRequest
 
 MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024  # 1GB
 
@@ -70,7 +70,7 @@ class KaspadThread(object):
             raise KaspadCommunicationError(str(e))
 
     async def yield_cmd(self, cmd, params=None):
-        msg = KaspadMessage()
+        msg = KaspadRequest()
         msg2 = getattr(msg, cmd)
         payload = params
 
@@ -85,7 +85,7 @@ class KaspadThread(object):
         await self.__queue.get()
 
     def yield_cmd_sync(self, cmd, params=None):
-        msg = KaspadMessage()
+        msg = KaspadRequest()
         msg2 = getattr(msg, cmd)
         payload = params
 

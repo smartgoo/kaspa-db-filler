@@ -12,7 +12,7 @@ _logger = logging.getLogger(__name__)
 
 class VirtualChainProcessor(object):
     """
-    VirtualChainProcessor polls the command getVirtualSelectedParentChainFromBlockRequest and updates transactions
+    VirtualChainProcessor polls the command getVirtualChainFromBlock and updates transactions
     with is_accepted False or True.
 
     To make sure all blocks are already in database, the VirtualChain processor has a prepare function, which is
@@ -94,17 +94,17 @@ class VirtualChainProcessor(object):
         """
         Add known blocks to database
         """
-        resp = await self.client.request("getVirtualSelectedParentChainFromBlockRequest",
+        resp = await self.client.request("getVirtualChainFromBlockRequest",
                                          {"startHash": self.start_point,
                                           "includeAcceptedTransactionIds": True},
                                          timeout=240)
 
         # if there is a response, add to queue and set new startpoint
-        if resp["getVirtualSelectedParentChainFromBlockResponse"]:
+        if resp["getVirtualChainFromBlockResponse"]:
             _logger.debug(f'Got response with '
-                          f'{len(resp["getVirtualSelectedParentChainFromBlockResponse"]["addedChainBlockHashes"])}'
+                          f'{len(resp["getVirtualChainFromBlockResponse"]["addedChainBlockHashes"])}'
                           f' addedChainBlockHashes')
-            self.virtual_chain_response = resp["getVirtualSelectedParentChainFromBlockResponse"]
+            self.virtual_chain_response = resp["getVirtualChainFromBlockResponse"]
         else:
             _logger.debug('Empty response.')
             self.virtual_chain_response = None

@@ -28,7 +28,7 @@ _logger = logging.getLogger(__name__)
 
 # create tables in database
 _logger.info('Creating DBs if not exist.')
-create_all(drop=True)
+create_all(drop=False)
 
 kaspad_hosts = []
 

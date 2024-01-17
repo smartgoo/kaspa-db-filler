@@ -13,8 +13,11 @@ class Conf(BaseSettings):
     ROOT_DIR: Path = Path(__file__).parent
     LOG_DIR: Path = ROOT_DIR / 'logs'
 
+    ARCHIVE_DIR: Path 
+
     KASPAD_HOST_1: str
 
     DB_URI: str
+    ASYNC_DB_URI: str
 
 conf = Conf()

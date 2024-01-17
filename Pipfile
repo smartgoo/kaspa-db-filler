@@ -9,8 +9,10 @@ psycopg2-binary = "*"
 grpcio = "*"
 grpcio-tools = "*"
 pydantic_settings = { version = "*", extras = ["dotenv"] }
+asyncpg = "*"
 
 [dev-packages]
+jupyterlab = "*"
 
 [requires]
 python_version = "3.10"

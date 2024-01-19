@@ -17,20 +17,20 @@ from models.Transaction import (
 )
 
 class Archiver:
-    def __init__(self, dir_name, far_datetime, close_datetime, del_older_than):
+    def __init__(self, dir_name, export_point_datetime, delete_point_datetime):
         self.dir_name = dir_name
 
         # Format far_datetime for use in SQL
-        self.far_datetime_str = far_datetime.strftime('%Y-%m-%d %H:%M:%S')
-        self.far_timestamp = int(far_datetime.timestamp() * 1000)
+        # self.far_datetime_str = far_datetime.strftime('%Y-%m-%d %H:%M:%S')
+        # self.far_timestamp = int(far_datetime.timestamp() * 1000)
 
-        # Format close_datetime for use in SQL
-        self.close_datetime_str = close_datetime.strftime('%Y-%m-%d %H:%M:%S')
-        self.close_timestamp = int(close_datetime.timestamp() * 1000)
+        # Format export_point_datetime for use in SQL
+        self.export_point_datetime_str = export_point_datetime.strftime('%Y-%m-%d %H:%M:%S')
+        self.close_timestamp = int(export_point_datetime.timestamp() * 1000)
 
         # Format delete_older_than for use in SQL
-        self.del_older_than_str = del_older_than.strftime('%Y-%m-%d %H:%M:%S')
-        self.del_older_than_timestamp = int(del_older_than.timestamp() * 1000)
+        self.delete_point_datetime_str = delete_point_datetime.strftime('%Y-%m-%d %H:%M:%S')
+        self.delete_point_datetime_timestamp = int(delete_point_datetime.timestamp() * 1000)
 
         self._init_dirs()
     
@@ -91,7 +91,7 @@ class Archiver:
         # Export to CSV
         sql = f"""
             COPY (
-                SELECT * FROM blocks WHERE timestamp BETWEEN '{self.far_datetime_str}' AND '{self.close_datetime_str}'
+                SELECT * FROM blocks WHERE timestamp < '{self.export_point_datetime_str}'
             ) 
             TO '{self.archive_dir_path}/blocks.csv' 
             WITH CSV HEADER;
@@ -101,7 +101,7 @@ class Archiver:
             s.execute(text(sql))
 
     def _delete_blocks(self):
-        sql = f"DELETE FROM blocks WHERE timestamp BETWEEN '{self.far_datetime_str}' AND '{self.del_older_than_str}'"
+        sql = f"DELETE FROM blocks WHERE timestamp < '{self.delete_point_datetime_str}'"
         
         with session_maker() as s:
             s.execute(text(sql))
@@ -110,7 +110,7 @@ class Archiver:
     def _export_transactions(self):
         sql = f"""
         COPY (
-            SELECT * FROM transactions WHERE block_time BETWEEN {self.far_timestamp} AND {self.close_timestamp}
+            SELECT * FROM transactions WHERE block_time < {self.close_timestamp}
         ) 
         TO '{self.archive_dir_path}/transactions.csv' 
         WITH CSV HEADER;
@@ -120,7 +120,7 @@ class Archiver:
             s.execute(text(sql))
 
     def _delete_transactions(self):
-        sql = f"DELETE FROM transactions WHERE block_time BETWEEN {self.far_timestamp} AND {self.del_older_than_timestamp}"
+        sql = f"DELETE FROM transactions WHERE block_time < {self.delete_point_datetime_timestamp}"
         
         with session_maker() as s:
             s.execute(text(sql))
@@ -140,7 +140,7 @@ class Archiver:
             FROM transactions tx
             JOIN transactions_inputs tx_in
             on tx.transaction_id = tx_in.transaction_id
-            WHERE tx.block_time BETWEEN {self.far_timestamp} AND {self.close_timestamp}
+            WHERE tx.block_time < {self.close_timestamp}
         )
         TO '{self.archive_dir_path}/transaction-inputs.csv' 
         WITH CSV HEADER;
@@ -153,8 +153,8 @@ class Archiver:
         sql = f"""DELETE FROM transactions_inputs tx_in
         USING transactions tx
         WHERE tx.transaction_id = tx_in.transaction_id
-        AND tx.block_time BETWEEN {self.far_timestamp} AND {self.del_older_than_timestamp}
-    """
+        AND tx.block_time < {self.delete_point_datetime_timestamp}
+        """
         
         with session_maker() as s:
             s.execute(text(sql))
@@ -181,7 +181,7 @@ class Archiver:
             on tx_in.previous_outpoint_hash = tx_out.transaction_id 
             and tx_in.previous_outpoint_index = tx_out.index
 
-            where tx.block_time between {self.far_timestamp} AND {self.close_timestamp}
+            where tx.block_time < {self.close_timestamp}
         )
         TO '{self.archive_dir_path}/transaction-outputs-spent.csv' 
         WITH CSV HEADER;
@@ -196,7 +196,7 @@ class Archiver:
             WHERE transactions_outputs.transaction_id = transactions_inputs.previous_outpoint_hash
             AND transactions_outputs.index = transactions_inputs.previous_outpoint_index
             AND transactions_inputs.transaction_id = transactions.transaction_id
-            AND transactions.block_time BETWEEN {self.far_timestamp} AND {self.close_timestamp}
+            AND transactions.block_time < {self.close_timestamp}
         """
         
         with session_maker() as s:
@@ -217,7 +217,7 @@ class Archiver:
             FROM transactions tx
             JOIN transactions_outputs tx_out 
             on tx.transaction_id = tx_out.transaction_id
-            WHERE tx.block_time BETWEEN {self.far_timestamp} AND {self.close_timestamp}
+            WHERE tx.block_time < {self.close_timestamp}
         )
         TO '{self.archive_dir_path}/transaction-outputs-created.csv' 
         WITH CSV HEADER;
@@ -234,12 +234,12 @@ if __name__ == "__main__":
         oldest_block = s.query(Block).order_by(asc(Block.timestamp)).first() 
         oldest_tx = s.query(Transaction).order_by(asc(Transaction.block_time)).first()
 
-    # TODO Validate that oldest_block and oldest_tx are from the same date? Is this necessary?
-
-    # Iterate days between oldest_date and present
     today = datetime.now().date()
-    target_date = oldest_block.timestamp.date()
-    i = 0
+
+    # Always assume target date day after oldest block timestamp in DB (naive)
+    target_date = oldest_block.timestamp.date() + timedelta(days=1)
+
+    # Iterate days between target_date and present
     while target_date < today:
         # Convert target_date to datetime
         target_datetime = datetime(
@@ -248,33 +248,24 @@ if __name__ == "__main__":
             day=target_date.day
         )
 
-        # Archive will include data from <23:50:00 day before target_date> to <00:10:00 day after target_date>
+        # Archive will include data from {23:50:00 day before target_date} to {00:10:00 day after target_date}
         padding_mins = 10
-        far_datetime = target_datetime - timedelta(minutes=padding_mins)
-        close_datetime = target_datetime + timedelta(days=1, minutes=padding_mins)
-
-        # TODO this is correct but messy. Find better way to handle it.
-        if i == 0 and oldest_block.timestamp > far_datetime:
-            print("next day")
-            i += 1
-            target_date += timedelta(days=1)
-            continue
+        export_point_datetime = target_datetime + timedelta(days=1, minutes=padding_mins)
         
-        # Only delete up to 23:50:00 of target date
-        # So that when we archive tomorrow, we can honor the 10 min padding appropriately 
-        del_older_than = far_datetime + timedelta(days=1)
+        # BUT only delete up to 23:50:00 of target date. So that when we archive next day, we can honor the 10 min padding 
+        delete_point_datetime = target_datetime + timedelta(hours=23, minutes=50)
 
-        print(f'far_datetime:   {far_datetime}')
-        print(f'target_date:    {target_date}')
-        print(f'close_datetime: {close_datetime}')
-        print(f'del_older_than: {del_older_than}\n')
+        print(f'oldest_block:           {oldest_block.timestamp}')
+        print(f'oldest_tx:              {datetime.fromtimestamp(oldest_tx.block_time / 1000)}')
+        print(f'target_date:            {target_date}')
+        print(f'export_point_datetime:  {export_point_datetime}')
+        print(f'delete_point_datetime:  {delete_point_datetime}\n')
 
         # Init and run archiver for the given time range
         archiver = Archiver(
             dir_name=f'{target_date}_archive',
-            far_datetime=far_datetime,
-            close_datetime=close_datetime,
-            del_older_than=del_older_than
+            export_point_datetime=export_point_datetime,
+            delete_point_datetime=delete_point_datetime
         )
         archiver.run(
             del_pg=True,
@@ -282,6 +273,4 @@ if __name__ == "__main__":
             del_local_gz=False
         )
 
-        # Increment target_date and iter counter
         target_date += timedelta(days=1)
-        i += 1

@@ -3,7 +3,7 @@ import logging
 import typer
 
 from conf.log import configure_logger
-from db_utils.archive import main
+from db_utils.archive import main as archive_main
 
 configure_logger()
 _logger = logging.getLogger(__name__)
@@ -14,12 +14,11 @@ app = typer.Typer()
 def archive(
     del_pg: bool = False, 
     del_csvs: bool = False,
-    del_tarball: bool = False
 ):
-    main(
+    archive_main(
         del_pg, 
         del_csvs,
-        del_tarball
+        False # Never delete tarball...
     )
 
 @app.command()

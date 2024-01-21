@@ -1,20 +1,10 @@
-from datetime import datetime, timedelta
-import shutil
-import tarfile
-import time
 import os
+import tarfile
 
-from sqlalchemy import asc
 from sqlalchemy.sql import text
 
-from conf import conf
+from conf.conf import conf
 from dbsession import session_maker
-from models.Block import Block
-from models.Transaction import (
-    Transaction,
-    TransactionInput,
-    TransactionOutput,
-)
 
 class Archiver:
     def __init__(self, dir_name, export_point_datetime, delete_point_datetime):
@@ -48,12 +38,12 @@ class Archiver:
     def run(self, gzip=True, s3=True, del_pg=True, del_local_dir=True, del_local_gz=True):
         self._export_blocks()
         self._export_transactions()
-        self._export_created_transaction_outputs()
-        self._export_spent_trasaction_outputs()
+        # self._export_created_transaction_outputs()
+        # self._export_spent_trasaction_outputs()
+        self._export_transaction_outputs()
         self._export_transaction_inputs()
 
-        # Delete from postgres DB based on param
-        # Sequence of these is important
+        # Delete from postgres DB based on param. Sequence of these is important
         if del_pg:
             self._delete_blocks()
             self._delete_spent_transaction_outputs()
@@ -228,49 +218,50 @@ class Archiver:
 
             # Not deleting here since we only want to delete spent tx outputs. This is handled by above
 
-if __name__ == "__main__":
-    # Get oldest block date
-    with session_maker() as s:
-        oldest_block = s.query(Block).order_by(asc(Block.timestamp)).first() 
-        oldest_tx = s.query(Transaction).order_by(asc(Transaction.block_time)).first()
+    def _export_transaction_outputs(self):
+        """ 
+            Exports transaction outputs, includes:
+            - all created transaction outputs for the given period
+            - all spent transaction outputs for the given period
+        """
 
-    today = datetime.now().date()
+        sql = f"""
+        COPY (
+            -- tx outputs
+            SELECT 
+                tx_out.transaction_id,
+                tx_out.index,
+                tx_out.amount,
+                tx_out.script_public_key,
+                tx_out.script_public_key_address,
+                tx_out.script_public_key_type,
+                tx_out.accepting_block_hash
+            FROM transactions tx
+            JOIN transactions_outputs tx_out 
+            ON tx.transaction_id = tx_out.transaction_id
+            WHERE tx.block_time < {self.close_timestamp}
 
-    # Always assume target date day after oldest block timestamp in DB (naive)
-    target_date = oldest_block.timestamp.date() + timedelta(days=1)
+            UNION
 
-    # Iterate days between target_date and present
-    while target_date < today:
-        # Convert target_date to datetime
-        target_datetime = datetime(
-            year=target_date.year, 
-            month=target_date.month, 
-            day=target_date.day
+            SELECT 
+                tx_out.transaction_id,
+                tx_out.index,
+                tx_out.amount,
+                tx_out.script_public_key,
+                tx_out.script_public_key_address,
+                tx_out.script_public_key_type,
+                tx_out.accepting_block_hash
+            FROM transactions tx
+            JOIN transactions_inputs tx_in
+            ON tx.transaction_id = tx_in.transaction_id
+            LEFT JOIN transactions_outputs tx_out
+            ON tx_in.previous_outpoint_hash = tx_out.transaction_id 
+            AND tx_in.previous_outpoint_index = tx_out.index
+            WHERE tx.block_time < {self.close_timestamp}
         )
+        TO '{self.archive_dir_path}/transaction-outputs.csv' 
+        WITH CSV HEADER;
+        """
 
-        # Archive will include data from {23:50:00 day before target_date} to {00:10:00 day after target_date}
-        padding_mins = 10
-        export_point_datetime = target_datetime + timedelta(days=1, minutes=padding_mins)
-        
-        # BUT only delete up to 23:50:00 of target date. So that when we archive next day, we can honor the 10 min padding 
-        delete_point_datetime = target_datetime + timedelta(hours=23, minutes=50)
-
-        print(f'oldest_block:           {oldest_block.timestamp}')
-        print(f'oldest_tx:              {datetime.fromtimestamp(oldest_tx.block_time / 1000)}')
-        print(f'target_date:            {target_date}')
-        print(f'export_point_datetime:  {export_point_datetime}')
-        print(f'delete_point_datetime:  {delete_point_datetime}\n')
-
-        # Init and run archiver for the given time range
-        archiver = Archiver(
-            dir_name=f'{target_date}_archive',
-            export_point_datetime=export_point_datetime,
-            delete_point_datetime=delete_point_datetime
-        )
-        archiver.run(
-            del_pg=True,
-            del_local_dir=False, 
-            del_local_gz=False
-        )
-
-        target_date += timedelta(days=1)
+        with session_maker() as s:
+            s.execute(text(sql))

@@ -8,22 +8,17 @@ from BlocksProcessor import BlocksProcessor
 # from TxAddrMappingUpdater import TxAddrMappingUpdater
 from VirtualChainProcessor import VirtualChainProcessor
 
-from conf import conf
+from conf.conf import conf
+from conf.log import configure_logger
 from dbsession import create_all
 from helper import KeyValueStore
 from kaspad.KaspadMultiClient import KaspadMultiClient
-
-logging.basicConfig(format="%(asctime)s::%(levelname)s::%(name)s::%(message)s",
-                    level=logging.DEBUG if conf.DEBUG else logging.INFO,
-                    handlers=[
-                        logging.StreamHandler()
-                    ]
-                    )
 
 # disable sqlalchemy notifications
 logging.getLogger('sqlalchemy').setLevel(logging.ERROR)
 
 # get file logger
+configure_logger()
 _logger = logging.getLogger(__name__)
 
 # create tables in database

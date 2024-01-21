@@ -10,6 +10,7 @@ grpcio = "*"
 grpcio-tools = "*"
 pydantic_settings = { version = "*", extras = ["dotenv"] }
 asyncpg = "*"
+typer = "*"
 
 [dev-packages]
 jupyterlab = "*"

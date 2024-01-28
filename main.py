@@ -30,7 +30,6 @@ kaspad_hosts = []
 for i in range(100):
     try:
         host = getattr(conf, f"KASPAD_HOST_{i + 1}")
-        print(host)
         kaspad_hosts.append(host.strip())
     except AttributeError:
         break

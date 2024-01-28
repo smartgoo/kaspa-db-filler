@@ -3,8 +3,8 @@ from sqlalchemy import Column, String, Float, Boolean, ARRAY, Integer, BigIntege
 from dbsession import Base
 
 
-class Block(Base):
-    __tablename__ = 'blocks'
+class RestoredBlock(Base):
+    __tablename__ = 'restored_blocks'
 
     hash = Column(String, primary_key=True)
     accepted_id_merkle_root = Column(String)
@@ -25,6 +25,6 @@ class Block(Base):
     utxo_commitment = Column(String)
     version = Column(Integer)
 
-Index(f"blocks_idx_chainblock", Block.is_chain_block)
-# Index("idx_blue_score", Block.blue_score)
-# Index("idx_daa_score", Block.daa_score)
+Index(f"restored_blocks_idx_chainblock", Block.is_chain_block)
+# Index("restored_idx_blue_score", Block.blue_score)
+# Index("restored_idx_daa_score", Block.daa_score)

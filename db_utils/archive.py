@@ -12,7 +12,7 @@ from .Archiver import Archiver
 
 _logger = logging.getLogger(__name__)
 
-def main(del_pg, del_csvs, del_tarball):
+def main(del_pg: bool = False, del_csvs: bool = False):
     # Get oldest block date
     with session_maker() as s:
         oldest_block = s.query(Block).order_by(asc(Block.timestamp)).first() 
@@ -40,12 +40,12 @@ def main(del_pg, del_csvs, del_tarball):
         # BUT it only deletes anything older than <23:50:00 of target date>. So that when we archive next day, we can honor the 10 min padding 
         delete_point_datetime = target_datetime + timedelta(hours=23, minutes=60-padding_mins)
 
+        _logger.info(f'today = {today}')
         _logger.info(f'Processing target_date {target_date}')
-        _logger.info(f' - today = {today}')
-        _logger.info(f' - oldest_block.timestamp = {oldest_block.timestamp}')
-        _logger.info(f' - oldest_tx.block_time = {datetime.fromtimestamp(oldest_tx.block_time / 1000)}')
-        _logger.info(f' - export_point_datetime = {export_point_datetime}')
-        _logger.info(f' - delete_point_datetime = {delete_point_datetime}')
+        _logger.info(f'oldest_block.timestamp = {oldest_block.timestamp}')
+        _logger.info(f'oldest_tx.block_time = {datetime.fromtimestamp(oldest_tx.block_time / 1000)}')
+        _logger.info(f'export_point_datetime = {export_point_datetime}')
+        _logger.info(f'delete_point_datetime = {delete_point_datetime}')
 
         # Init and run archiver for the given target date
         archiver = Archiver(
@@ -56,7 +56,7 @@ def main(del_pg, del_csvs, del_tarball):
         archiver.run(
             del_pg=del_pg,
             del_local_dir=del_csvs, 
-            del_local_gz=del_tarball
+            del_local_gz=False
         )
 
         target_date += timedelta(days=1)

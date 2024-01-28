@@ -3,8 +3,8 @@ from sqlalchemy import Column, String, Integer, BigInteger, Boolean, ARRAY, Inde
 from dbsession import Base
 
 
-class Transaction(Base):
-    __tablename__ = 'transactions'
+class RestoredTransaction(Base):
+    __tablename__ = 'restored_transactions'
     subnetwork_id = Column(String)  # "0000000000000000000000000000000000000000",
     transaction_id = Column(String, primary_key=True)  # "bedea078f74f241e7d755a98c9e39fda1dc56491dc7718485a8f221f73f03061",
     hash = Column(String)  # "a5f99f4dc55693124e7c6b75dc3e56b60db381a74716046dbdcae9210ce1052f",
@@ -14,13 +14,13 @@ class Transaction(Base):
     is_accepted = Column(Boolean, default=False)
     accepting_block_hash = Column(String, nullable=True)
 
-Index(f"txs_idx_block_time", Transaction.block_time)
-Index(f"txs_idx_accepting_block", Transaction.accepting_block_hash)
-Index(f"txs_idx_block_hash", Transaction.block_hash)
+# Index(f"restored_txs_idx_block_time", Transaction.block_time)
+Index(f"restored_txs_idx_accepting_block", Transaction.accepting_block_hash)
+# Index(f"restored_txs_idx_block_hash", Transaction.block_hash)
 
 
-class TransactionOutput(Base):
-    __tablename__ = 'transactions_outputs'
+class RestoredTransactionOutput(Base):
+    __tablename__ = 'restored_transactions_outputs'
     id = Column(Integer, primary_key=True)
     transaction_id = Column(String)
     index = Column(Integer)
@@ -30,13 +30,13 @@ class TransactionOutput(Base):
     script_public_key_type = Column(String)
     accepting_block_hash = Column(String)
 
-Index(f"outputs_idx_creating_tx_id", TransactionOutput.transaction_id)
-# Index("idx_txouts_addr", TransactionOutput.script_public_key_address)
-# Index("tx_id_and_index", TransactionOutput.transaction_id, TransactionOutput.index)
+Index(f"restored_outputs_idx_creating_tx_id", TransactionOutput.transaction_id)
+# Index("restored_idx_txouts_addr", TransactionOutput.script_public_key_address)
+# Index("restored_tx_id_and_index", TransactionOutput.transaction_id, TransactionOutput.index)
 
 
-class TransactionInput(Base):
-    __tablename__ = 'transactions_inputs'
+class RestoredTransactionInput(Base):
+    __tablename__ = 'restored_transactions_inputs'
     id = Column(Integer, primary_key=True)
     transaction_id = Column(String)
     index = Column(Integer)
@@ -47,5 +47,5 @@ class TransactionInput(Base):
     signature_script = Column(String)  # "41c903159094....281a1d26f70b0037d600554e01",
     sig_op_count = Column(Integer)
 
-Index(f"inputs_idx_creating_tx_id", TransactionInput.previous_outpoint_hash)
-Index(f"inputs_idx_spending_tx_id", TransactionInput.transaction_id)
+Index(f"restored_inputs_idx_creating_tx_id", TransactionInput.previous_outpoint_hash)
+Index(f"restored_inputs_idx_spending_tx_id", TransactionInput.transaction_id)

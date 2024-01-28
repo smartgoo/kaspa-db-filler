@@ -1,3 +1,4 @@
+import logging
 import os
 import tarfile
 
@@ -6,13 +7,11 @@ from sqlalchemy.sql import text
 from conf.conf import conf
 from dbsession import session_maker
 
+_logger = logging.getLogger(__name__)
+
 class Archiver:
     def __init__(self, dir_name, export_point_datetime, delete_point_datetime):
         self.dir_name = dir_name
-
-        # Format far_datetime for use in SQL
-        # self.far_datetime_str = far_datetime.strftime('%Y-%m-%d %H:%M:%S')
-        # self.far_timestamp = int(far_datetime.timestamp() * 1000)
 
         # Format export_point_datetime for use in SQL
         self.export_point_datetime_str = export_point_datetime.strftime('%Y-%m-%d %H:%M:%S')
@@ -38,8 +37,6 @@ class Archiver:
     def run(self, gzip=True, s3=True, del_pg=True, del_local_dir=True, del_local_gz=True):
         self._export_blocks()
         self._export_transactions()
-        # self._export_created_transaction_outputs()
-        # self._export_spent_trasaction_outputs()
         self._export_transaction_outputs()
         self._export_transaction_inputs()
 
@@ -51,14 +48,11 @@ class Archiver:
             self._delete_transactions()
             # not deleting unspent tx outputs
 
-            # with session_maker() as s:
-            #     s.execute(text("vacuum analyze"))
-
         # Gzip based on param
         if gzip:
             self._gz()
 
-        # Put to s3 based on param
+        # Put to s3 based on param TODO
         if s3:
             # self._gz()
             # put to s3
@@ -78,6 +72,7 @@ class Archiver:
             tar.add(self.archive_dir_path, arcname=os.path.basename(self.archive_dir_path))
 
     def _export_blocks(self):
+        _logger.info('Exporting blocks')
         # Export to CSV
         sql = f"""
             COPY (
@@ -91,6 +86,7 @@ class Archiver:
             s.execute(text(sql))
 
     def _delete_blocks(self):
+        _logger.info('Deleting blocks')
         sql = f"DELETE FROM blocks WHERE timestamp < '{self.delete_point_datetime_str}'"
         
         with session_maker() as s:
@@ -98,6 +94,7 @@ class Archiver:
             s.commit()
 
     def _export_transactions(self):
+        _logger.info('Exporting transactions')
         sql = f"""
         COPY (
             SELECT * FROM transactions WHERE block_time < {self.close_timestamp}
@@ -110,6 +107,7 @@ class Archiver:
             s.execute(text(sql))
 
     def _delete_transactions(self):
+        _logger.info('Deleting transactions')
         sql = f"DELETE FROM transactions WHERE block_time < {self.delete_point_datetime_timestamp}"
         
         with session_maker() as s:
@@ -117,6 +115,7 @@ class Archiver:
             s.commit()
     
     def _export_transaction_inputs(self):
+        _logger.info('Exporting transaction inputs')
         # Export inputs
         sql = f"""
         COPY (
@@ -140,6 +139,7 @@ class Archiver:
             s.execute(text(sql))
 
     def _delete_transaction_inputs(self):
+        _logger.info('Deleting transaction inputs')
         sql = f"""DELETE FROM transactions_inputs tx_in
         USING transactions tx
         WHERE tx.transaction_id = tx_in.transaction_id
@@ -150,77 +150,24 @@ class Archiver:
             s.execute(text(sql))
             s.commit()
 
-    def _export_spent_trasaction_outputs(self):
-        sql = f"""
-        COPY (
-            select 
-            tx_out.transaction_id,
-            tx_out.index,
-            tx_out.amount,
-            tx_out.script_public_key,
-            tx_out.script_public_key_address,
-            tx_out.script_public_key_type,
-            tx_out.accepting_block_hash
-
-            from transactions tx
-
-            join transactions_inputs tx_in
-            on tx.transaction_id = tx_in.transaction_id
-
-            left join transactions_outputs tx_out
-            on tx_in.previous_outpoint_hash = tx_out.transaction_id 
-            and tx_in.previous_outpoint_index = tx_out.index
-
-            where tx.block_time < {self.close_timestamp}
-        )
-        TO '{self.archive_dir_path}/transaction-outputs-spent.csv' 
-        WITH CSV HEADER;
-        """
-        
-        with session_maker() as s:
-            s.execute(text(sql))
-
     def _delete_spent_transaction_outputs(self):
+        _logger.info('Deleting spent transaction outputs')
         sql = f"""DELETE FROM transactions_outputs
             USING transactions_inputs, transactions
             WHERE transactions_outputs.transaction_id = transactions_inputs.previous_outpoint_hash
             AND transactions_outputs.index = transactions_inputs.previous_outpoint_index
             AND transactions_inputs.transaction_id = transactions.transaction_id
-            AND transactions.block_time < {self.close_timestamp}
+            AND transactions.block_time < {self.delete_point_datetime_timestamp}
         """
         
         with session_maker() as s:
             s.execute(text(sql))
             s.commit()
 
-    def _export_created_transaction_outputs(self):
-        sql = f"""
-        COPY (
-            SELECT 
-            tx_out.transaction_id,
-            tx_out.index,
-            tx_out.amount,
-            tx_out.script_public_key,
-            tx_out.script_public_key_address,
-            tx_out.script_public_key_type,
-            tx_out.accepting_block_hash
-            FROM transactions tx
-            JOIN transactions_outputs tx_out 
-            on tx.transaction_id = tx_out.transaction_id
-            WHERE tx.block_time < {self.close_timestamp}
-        )
-        TO '{self.archive_dir_path}/transaction-outputs-created.csv' 
-        WITH CSV HEADER;
-        """
-        
-        with session_maker() as s:
-            s.execute(text(sql))
-
-            # Not deleting here since we only want to delete spent tx outputs. This is handled by above
-
     def _export_transaction_outputs(self):
+        _logger.info('Exporting created and spent transaction outputs')
         """ 
-            Exports transaction outputs, includes:
+            Exports transaction outputs to a single file. Deduplicated data set of:
             - all created transaction outputs for the given period
             - all spent transaction outputs for the given period
         """

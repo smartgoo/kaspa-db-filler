@@ -106,7 +106,6 @@ class TransactionsValidator:
         # TODO validate rejected txs are properly set to null/False?
         # TODO other transaction data (accepted block, etc.)
 
-
 async def async_main():
     """
         Validates database is in sync with node.
@@ -146,8 +145,11 @@ async def async_main():
     tv = TransactionsValidator(txs)
     await tv.validate()
 
-    # Validate all transactions in VSPC are in DB and marked as accepted = True
-    # For all TX in DB not in VSPC, should be marked as false
+    # Validate outputs
+    # Get blocks from low_block.hash until tip
+    
+
+    # TODO For all TX in DB not in VSPC, should be marked as false
 
 def main():
     asyncio.run(async_main())

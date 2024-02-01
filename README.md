@@ -1,16 +1,11 @@
-# Overview
-Primary app is `main.py` that runs `kaspa-db-filler` app.
-
-Collection of misc. database scripts/utilities exist in `cli.py`.
-
 # Apps
 ## main.py
 `pipenv run python main.py`
 
 ## cli.py
-A [typer](https://typer.tiangolo.com) CLI app for various database utilities. Currently provides functionality to archive data. Restoring data is WIP. 
+A [typer](https://typer.tiangolo.com) CLI app. A collection of misc. database scripts/utilities/analysis programs can be accessed via cli app in `cli.py`.
 
-To run: `pipenv run python cli.py --help`
+`pipenv run python cli.py --help`
 
 # Misc Notes
 Proto specs in `./kaspad/protos-rust` are from [rusty-kaspa v0.13.3](https://github.com/kaspanet/rusty-kaspa/releases/tag/v0.13.3)

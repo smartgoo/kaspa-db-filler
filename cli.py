@@ -3,8 +3,8 @@ import logging
 import typer
 
 from conf.log import configure_logger
-import db_utils
-import analysis
+from cli_apps import db_utils
+from cli_apps import analysis
 
 configure_logger()
 _logger = logging.getLogger(__name__)

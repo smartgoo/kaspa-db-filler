@@ -78,7 +78,6 @@ class VirtualChainProcessor(object):
                 _logger.debug(f'Set is_chain_block=False for {count} Blocks')
                 s.commit()
 
-
             count_tx = 0
 
             # set is_accepted to True and add accepting_block_hash
@@ -92,7 +91,7 @@ class VirtualChainProcessor(object):
             _logger.debug(f'Set is_accepted=True for {count_tx} transactions.')
             s.commit()
 
-            # Set Block.is_chain_block to True for removed chain blocks
+            # Set Block.is_chain_block to True for added chain blocks
             count = s.query(Block).filter(Block.hash.in_(accepting_blocks)) \
                 .update({'is_chain_block': True})
             _logger.debug(f'Set is_chain_block=True for {count} Blocks')

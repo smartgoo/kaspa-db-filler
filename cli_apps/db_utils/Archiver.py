@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import tarfile
 
 from sqlalchemy.sql import text

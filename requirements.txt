@@ -1,0 +1,7 @@
+sqlalchemy
+psycopg2-binary
+grpcio
+grpcio-tools
+pydantic_settings[dotenv]
+asyncpg
+typer

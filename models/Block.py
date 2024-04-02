@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, Boolean, ARRAY, Integer, BigInteger, TIMESTAMP, Index
+from sqlalchemy import Column, String, Float, Boolean, ARRAY, Integer, BigInteger, TIMESTAMP, Index, LargeBinary
 
 from dbsession import Base
 
@@ -24,6 +24,7 @@ class Block(Base):
     timestamp = Column(TIMESTAMP(timezone=False))
     utxo_commitment = Column(String)
     version = Column(Integer)
+    payload = Column(LargeBinary, nullable=True)
 
 Index(f"blocks_idx_chainblock", Block.is_chain_block)
 # Index("idx_blue_score", Block.blue_score)

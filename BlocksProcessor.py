@@ -203,7 +203,9 @@ class BlocksProcessor(object):
                              pruning_point=block["header"]["pruningPoint"],
                              timestamp=datetime.fromtimestamp(int(block["header"]["timestamp"]) / 1000).isoformat(),
                              utxo_commitment=block["header"]["utxoCommitment"],
-                             version=block["header"]["version"])
+                             version=block["header"]["version"],
+                             payload=bytes.fromhex(block['transactions'][0].get('payload', None))
+                             )
 
         # remove same block hash
         self.blocks_to_add = [b for b in self.blocks_to_add if b.hash != block_hash]

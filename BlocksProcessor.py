@@ -29,8 +29,8 @@ class BlocksProcessor(object):
         self.on_commited = Event()
 
         self.txs = {}
-        self.txs_output = []
-        self.txs_input = []
+        # self.txs_output = []
+        # self.txs_input = []
 
         # Did the loop already see the DAG tip
         self.synced = False
@@ -106,34 +106,32 @@ class BlocksProcessor(object):
             if not self.is_tx_id_in_queue(transaction["verboseData"]["transactionId"]):
                 # Add transaction
 
-                self.txs[tx_id] = Transaction(subnetwork_id=transaction["subnetworkId"],
+                self.txs[tx_id] = Transaction(# subnetwork_id=transaction["subnetworkId"],
                                               transaction_id=transaction["verboseData"]["transactionId"],
-                                              hash=transaction["verboseData"]["hash"],
-                                              mass=transaction["verboseData"].get("mass"),
+                                              # hash=transaction["verboseData"]["hash"],
+                                              # mass=transaction["verboseData"].get("mass"),
                                               block_hash=[transaction["verboseData"]["blockHash"]],
-                                              block_time=int(transaction["verboseData"]["blockTime"]))
+                                              block_time=int(transaction["verboseData"]["blockTime"])
+                                            )
 
                 # Add transactions output
-                for index, out in enumerate(transaction.get("outputs", [])):
-                    self.txs_output.append(TransactionOutput(transaction_id=transaction["verboseData"]["transactionId"],
-                                                             index=index,
-                                                             amount=out["amount"],
-                                                             script_public_key=out["scriptPublicKey"][
-                                                                 "scriptPublicKey"],
-                                                             script_public_key_address=out["verboseData"][
-                                                                 "scriptPublicKeyAddress"],
-                                                             script_public_key_type=out["verboseData"][
-                                                                 "scriptPublicKeyType"]))
+                # for index, out in enumerate(transaction.get("outputs", [])):
+                #     self.txs_output.append(TransactionOutput(transaction_id=transaction["verboseData"]["transactionId"],
+                #                                              index=index,
+                #                                              amount=out["amount"],
+                #                                              # script_public_key=out["scriptPublicKey"]["scriptPublicKey"],
+                #                                              script_public_key_address=out["verboseData"]["scriptPublicKeyAddress"],
+                #                                              # script_public_key_type=out["verboseData"]["scriptPublicKeyType"]
+                #                                              ))
                 # Add transactions input
-                for index, tx_in in enumerate(transaction.get("inputs", [])):
-                    self.txs_input.append(TransactionInput(transaction_id=transaction["verboseData"]["transactionId"],
-                                                           index=index,
-                                                           previous_outpoint_hash=tx_in["previousOutpoint"][
-                                                               "transactionId"],
-                                                           previous_outpoint_index=int(tx_in["previousOutpoint"].get(
-                                                               "index", 0)),
-                                                           signature_script=tx_in["signatureScript"],
-                                                           sig_op_count=tx_in.get("sigOpCount", 0)))
+                # for index, tx_in in enumerate(transaction.get("inputs", [])):
+                #     self.txs_input.append(TransactionInput(transaction_id=transaction["verboseData"]["transactionId"],
+                #                                            index=index,
+                #                                            previous_outpoint_hash=tx_in["previousOutpoint"]["transactionId"],
+                #                                            previous_outpoint_index=int(tx_in["previousOutpoint"].get("index", 0)),
+                #                                            # signature_script=tx_in["signatureScript"],
+                #                                            # sig_op_count=tx_in.get("sigOpCount", 0))
+                #                                            ))
             else:
                 # If the block if already in the Queue, merge the block_hashes.
                 self.txs[tx_id].block_hash = list(set(self.txs[tx_id].block_hash + [block_hash]))
@@ -159,13 +157,13 @@ class BlocksProcessor(object):
             for _ in self.txs.values():
                 session.add(_)
 
-            for tx_output in self.txs_output:
-                if tx_output.transaction_id in self.txs:
-                    session.add(tx_output)
+            # for tx_output in self.txs_output:
+            #     if tx_output.transaction_id in self.txs:
+            #         session.add(tx_output)
 
-            for tx_input in self.txs_input:
-                if tx_input.transaction_id in self.txs:
-                    session.add(tx_input)
+            # for tx_input in self.txs_input:
+            #     if tx_input.transaction_id in self.txs:
+            #         session.add(tx_input)
 
             try:
                 session.commit()
@@ -173,8 +171,8 @@ class BlocksProcessor(object):
 
                 # reset queues
                 self.txs = {}
-                self.txs_input = []
-                self.txs_output = []
+                # self.txs_input = []
+                # self.txs_output = []
 
             except IntegrityError:
                 session.rollback()
@@ -187,23 +185,23 @@ class BlocksProcessor(object):
         """
 
         block_entity = Block(hash=block_hash,
-                             accepted_id_merkle_root=block["header"]["acceptedIdMerkleRoot"],
-                             difficulty=block["verboseData"]["difficulty"],
+                             # accepted_id_merkle_root=block["header"]["acceptedIdMerkleRoot"],
+                             # difficulty=block["verboseData"]["difficulty"],
                              is_chain_block=block["verboseData"].get("isChainBlock", False),
-                             merge_set_blues_hashes=block["verboseData"].get("mergeSetBluesHashes", []),
-                             merge_set_reds_hashes=block["verboseData"].get("mergeSetRedsHashes", []),
-                             selected_parent_hash=block["verboseData"]["selectedParentHash"],
-                             bits=block["header"]["bits"],
-                             blue_score=int(block["header"]["blueScore"]),
-                             blue_work=block["header"]["blueWork"],
+                             # merge_set_blues_hashes=block["verboseData"].get("mergeSetBluesHashes", []),
+                             # merge_set_reds_hashes=block["verboseData"].get("mergeSetRedsHashes", []),
+                             # selected_parent_hash=block["verboseData"]["selectedParentHash"],
+                             # bits=block["header"]["bits"],
+                             # blue_score=int(block["header"]["blueScore"]),
+                             # blue_work=block["header"]["blueWork"],
                              daa_score=int(block["header"]["daaScore"]),
-                             hash_merkle_root=block["header"]["hashMerkleRoot"],
-                             nonce=block["header"]["nonce"],
-                             parents=block["header"]["parents"][0]["parentHashes"],
-                             pruning_point=block["header"]["pruningPoint"],
+                             # hash_merkle_root=block["header"]["hashMerkleRoot"],
+                             # nonce=block["header"]["nonce"],
+                             # parents=block["header"]["parents"][0]["parentHashes"], 
+                             # pruning_point=block["header"]["pruningPoint"],
                              timestamp=datetime.fromtimestamp(int(block["header"]["timestamp"]) / 1000).isoformat(),
-                             utxo_commitment=block["header"]["utxoCommitment"],
-                             version=block["header"]["version"],
+                             # utxo_commitment=block["header"]["utxoCommitment"],
+                             # version=block["header"]["version"],
                              payload=bytes.fromhex(block['transactions'][0].get('payload', None))
                              )
 
